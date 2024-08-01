@@ -1,5 +1,23 @@
 version: '2.4'
 services:
+  webserver:
+    build: ./web
+    ports:
+      - "3000:80"
+    links:
+      - backend
+    restart: always
+
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/usr/src/app
+    ports:
+      - "3001:3000"
+    links:
+      - mongodb
+    restart: always
+
   kafka:
     depends_on:
        - zookeeper
@@ -27,66 +45,21 @@ services:
       - zookeeper
     restart: always
     mem_limit: 6G
-  jobmanager:
-    image: flink:1.6.0-scala_2.11
-    command: jobmanager
-    links:
-      - mongodb
-      - zookeeper
-      - kafka
-    ports:
-        - "8081:8081"
-    expose:
-        - "6123"
-    volumes:
-       - ./conf/jobs:/opt/secupi/jobs
-       - ./conf/flink/conf:/opt/flink/conf
-       - ./data/flink/recovery:/opt/secupi/flink/recovery
-       - ./data/flink/state:/opt/secupi/flink/state
-    restart: always
-    mem_limit: 2048M
-    environment:
-      JOB_MANAGER_RPC_ADDRESS: jobmanager
-      KAFKA_BOOTSTRAP: kafka:9092
-      MONGO_URI: mongodb://mongodb:27017
-      FLINK_ENV_JAVA_OPTS: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
-  taskmanager:
-    depends_on:
-       - jobmanager
-       - mongodb
-       - zookeeper
-       - kafka
-    image: flink:1.6.0-scala_2.11
-    command: taskmanager
-    expose:
-        - "6121"
-        - "6122"
-    links:
-        - jobmanager
-    volumes:
-        - ./conf/flink/conf:/opt/flink/conf
-        - ./data/flink/recovery:/opt/secupi/flink/recovery
-        - ./data/flink/state:/opt/secupi/flink/state
-    restart: always
-    mem_limit: 1536M
-    environment:
-      JOB_MANAGER_RPC_ADDRESS: jobmanager
-      KAFKA_BOOTSTRAP: kafka:9092
-      MONGO_URI: mongodb://mongodb:27017
-      FLINK_ENV_JAVA_OPTS: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+
   zookeeper:
-   image: wurstmeister/zookeeper
-   volumes:
+    image: wurstmeister/zookeeper
+    volumes:
         - ./data/zookeeper/data:/tmp/zookeeper
         - ./data/zookeeper/log:/var/log/zookeeper
-   expose:
-       - "2181"
-       - "2888"
-       - "3888"
-   ports:
+    expose:
+      - "2181"
+      - "2888"
+      - "3888"
+    ports:
       - "2181:2181"
-   restart: always
-   mem_limit: 1024M
+    restart: always
+    mem_limit: 1024M
+
   mongodb:
     image: mongo:3.4.2
     expose:
@@ -98,5 +71,8 @@ services:
     command: mongod --smallfiles --wiredTigerCacheSizeGB=2
     mem_limit: 4G
     restart: always
+
 volumes:
   mongodb_volume:
+
+
