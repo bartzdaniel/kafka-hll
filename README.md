@@ -14,7 +14,7 @@
 
 2. Run Docker Compose to set up the environment:
 ```bash
-docker-compose up
+docker-compose up --build -d
 ```
 3. Generate 10,000,000 random entries and feed kafka topic:
 
