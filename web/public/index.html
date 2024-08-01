@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Viewer Counts</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .pagination {
+            margin-top: 10px;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            margin-right: 5px;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Viewer Counts</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Viewer ID</th>
+                <th>Unique Count</th>
+            </tr>
+        </thead>
+        <tbody id="data-table-body">
+        </tbody>
+    </table>
+    <div class="pagination">
+        <button id="prev-page" disabled>Previous</button>
+        <button id="next-page">Next</button>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 10;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchData(currentPage);
+
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    fetchData(currentPage);
+                }
+            });
+
+            document.getElementById('next-page').addEventListener('click', function() {
+                fetchData(currentPage + 1, true);
+            });
+        });
+
+        function fetchData(page, isNextPageRequest = false) {
+            fetch(`http://localhost:3001/viewer-counts?page=${page}&limit=${limit}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById("data-table-body");
+                    tbody.innerHTML = "";
+
+                    if (data.data.length > 0) {
+                        data.data.forEach(item => {
+                            const row = document.createElement("tr");
+                            const viewerIdCell = document.createElement("td");
+                            viewerIdCell.textContent = item.viewer_id;
+                            const uniqueCountCell = document.createElement("td");
+                            uniqueCountCell.textContent = item.unique_data_subjects;
+
+                            row.appendChild(viewerIdCell);
+                            row.appendChild(uniqueCountCell);
+                            tbody.appendChild(row);
+                        });
+
+                        if (isNextPageRequest) {
+                            currentPage = page;
+                        }
+
+                        document.getElementById('next-page').disabled = data.data.length < limit;
+                    } else {
+                        document.getElementById('next-page').disabled = true;
+                    }
+
+                    document.getElementById('prev-page').disabled = currentPage === 1;
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+    </script>
+</body>
+</html>
+

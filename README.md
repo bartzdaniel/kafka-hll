@@ -26,7 +26,7 @@ python generate_and_feed_kafka.py
 ```bash
 java -cp target/kafka-hyperloglog-mongodb-1.0-SNAPSHOT-jar-with-dependencies.jar com.example.KafkaHyperLogLogToMongoDB
 ```
-#### The Java file is located in the kafka-hll dir, yo ucan recompile it using:
+#### The Java file is located in the kafka-hll dir, you can recompile it using:
 ```bash
 mvn clean package
 ```

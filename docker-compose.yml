@@ -1,0 +1,102 @@
+version: '2.4'
+services:
+  kafka:
+    depends_on:
+       - zookeeper
+    image: wurstmeister/kafka:2.11-2.0.0
+    expose:
+      - "9092"
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    volumes:
+       - ./conf/kafka/config:/opt/kafka/config
+       - ./data/kafka/logs:/tmp/kafka-logs
+    environment:
+      KAFKA_BROKER_ID: 0       
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_HEAP_OPTS: "-Xmx3G -Xms3G"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_JVM_PERFORMANCE_OPTS: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+      KAFKA_LOG_DIRS: /tmp/kafka-logs
+    links:
+      - mongodb
+      - zookeeper
+    restart: always
+    mem_limit: 6G
+  jobmanager:
+    image: flink:1.6.0-scala_2.11
+    command: jobmanager
+    links:
+      - mongodb
+      - zookeeper
+      - kafka
+    ports:
+        - "8081:8081"
+    expose:
+        - "6123"
+    volumes:
+       - ./conf/jobs:/opt/secupi/jobs
+       - ./conf/flink/conf:/opt/flink/conf
+       - ./data/flink/recovery:/opt/secupi/flink/recovery
+       - ./data/flink/state:/opt/secupi/flink/state
+    restart: always
+    mem_limit: 2048M
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: jobmanager
+      KAFKA_BOOTSTRAP: kafka:9092
+      MONGO_URI: mongodb://mongodb:27017
+      FLINK_ENV_JAVA_OPTS: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+  taskmanager:
+    depends_on:
+       - jobmanager
+       - mongodb
+       - zookeeper
+       - kafka
+    image: flink:1.6.0-scala_2.11
+    command: taskmanager
+    expose:
+        - "6121"
+        - "6122"
+    links:
+        - jobmanager
+    volumes:
+        - ./conf/flink/conf:/opt/flink/conf
+        - ./data/flink/recovery:/opt/secupi/flink/recovery
+        - ./data/flink/state:/opt/secupi/flink/state
+    restart: always
+    mem_limit: 1536M
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: jobmanager
+      KAFKA_BOOTSTRAP: kafka:9092
+      MONGO_URI: mongodb://mongodb:27017
+      FLINK_ENV_JAVA_OPTS: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+  zookeeper:
+   image: wurstmeister/zookeeper
+   volumes:
+        - ./data/zookeeper/data:/tmp/zookeeper
+        - ./data/zookeeper/log:/var/log/zookeeper
+   expose:
+       - "2181"
+       - "2888"
+       - "3888"
+   ports:
+      - "2181:2181"
+   restart: always
+   mem_limit: 1024M
+  mongodb:
+    image: mongo:3.4.2
+    expose:
+      - "27017"
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_volume:/data/db
+    command: mongod --smallfiles --wiredTigerCacheSizeGB=2
+    mem_limit: 4G
+    restart: always
+volumes:
+  mongodb_volume:
